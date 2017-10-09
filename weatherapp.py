@@ -2,6 +2,7 @@ import tornado.log
 import tornado.ioloop
 import tornado.web
 from jinja2 import Environment, PackageLoader
+import requests
 
 # This retrieves the directory where the html lives
 ENV = Environment(
@@ -21,19 +22,31 @@ class WeatherHandler(tornado.web.RequestHandler):
     def get(self):
         template = ENV.get_template('weather.html')
         self.write(template.render())
-
+    # You must use a 'post' method to receive input fields
     def post(self):
-        # Access the input field from the form
+        # Retrieve the input field from the form
         city = self.get_body_argument('city')
-        # call API
-        # process data
-        # send back to web page
+        # Set API parameters
+        url = "http://api.openweathermap.org/data/2.5/weather"
+        querystring = {}
+        querystring["q"] = city
+        querystring["APPID"] = "f299452ee8305d7fe83e56f4699fdfdb"
+        # Call the API
+        response = requests.request("GET", url, params=querystring)
+        # Process the response
+        print(response.json())
+        # Render the weather page passing data to be displayed
+        template = ENV.get_template('weather.html')
+        self.write(template.render({'data': response.json(), 'myname': 'Greg'}))
 
 # Make the Web Applicaton using Tornado
 def make_app():
   return tornado.web.Application([
     (r"/", MainHandler),
     (r"/weather", WeatherHandler),
+    # The following reference to the StaticFileHandler should
+    # ALWAYS be here.
+    (r"/static/(.*)", tornado.web.StaticFileHandler, {'path': 'static'}),
     ], autoreload=True)
 
 # Main
