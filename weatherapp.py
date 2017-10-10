@@ -1,3 +1,5 @@
+import datetime
+
 import tornado.log
 import tornado.ioloop
 import tornado.web
@@ -25,19 +27,29 @@ class WeatherHandler(tornado.web.RequestHandler):
     # You must use a 'post' method to receive input fields
     def post(self):
         # Retrieve the input field from the form
-        city = self.get_body_argument('city')
-        # Set API parameters
-        url = "http://api.openweathermap.org/data/2.5/weather"
-        querystring = {}
-        querystring["q"] = city
-        querystring["APPID"] = "f299452ee8305d7fe83e56f4699fdfdb"
-        # Call the API
-        response = requests.request("GET", url, params=querystring)
+        form_data_city = self.get_body_argument('city')
+        # Create variable for select statement
+        too_old = datetime.datetime.utcnow() - datetime.timedelta(minutes=15)
+        # Retrieve cached weather from the database for the city
+        try:
+            weather_data = WeatherData.select().where(WeatherData.db_city == form_data_city).where(WeatherData.db_requested_time >= too_old).get()
+            # dictionary: weather_data.db_weather_API_response
+        except:
+            # Set API parameters
+            url = "http://api.openweathermap.org/data/2.5/weather"
+            querystring = {}
+            querystring["q"] = form_data_city
+            querystring["APPID"] = "f299452ee8305d7fe83e56f4699fdfdb"
+            # Call the API to get current weather
+            response = requests.request("GET", url, params=querystring)
+            # Write cache data to db
+            weather_data = WeatherData.create(db_city=form_data_city,
+            db_weather_API_response = response.json())
         # Process the response
         print(response.json())
         # Render the weather page passing data to be displayed
         template = ENV.get_template('weather.html')
-        self.write(template.render({'data': response.json(), 'myname': 'Greg'}))
+        self.write(template.render({'data': weather_data.db_weather_API_response, 'myname': 'Greg'}))
 
 # Make the Web Applicaton using Tornado
 def make_app():

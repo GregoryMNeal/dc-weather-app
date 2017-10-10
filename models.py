@@ -3,6 +3,7 @@ import os
 
 import peewee
 from playhouse.db_url import connect
+from playhouse.postgres_ext import JSONField
 
 DB = connect(
     os.environ.get(
@@ -15,20 +16,10 @@ class BaseModel (peewee.Model):
     class Meta:
         database = DB
 
-class Author (BaseModel):
-    name = peewee.CharField(max_length=60)
-    twitter = peewee.CharField(max_length=60)
+class WeatherData (BaseModel):
+    db_city = peewee.CharField()
+    db_weather_API_response = peewee.JSONField()
+    db_requested_time = peewee.DateTimeField(default=datetime.datetime.utcnow)
 
     def __str__ (self):
         return self.name
-
-class BlogPost (BaseModel):
-    author = peewee.ForeignKeyField(Author, null=True)
-    title = peewee.CharField(max_length=60)
-    slug = peewee.CharField(max_length=50, unique=True)
-    body = peewee.TextField()
-    created = peewee.DateTimeField(
-        default=datetime.datetime.utcnow)
-
-    def __str__ (self):
-        return self.title
